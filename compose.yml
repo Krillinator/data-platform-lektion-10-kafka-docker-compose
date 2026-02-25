@@ -48,7 +48,7 @@ services:
       - .env
     depends_on:
       - kafka
-    command: [ "uv", "run", "python", "-m", "app.consumer.print" ]
+    command: [ "uv", "run", "python", "-u", "app/consumer/print.py" ]
 
   app:
     build: .

@@ -4,7 +4,7 @@ from kafka import KafkaConsumer
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 TOPIC = os.getenv("PRODUCTS_TOPIC", "products.created")
-GROUP_ID = "print-consumer"
+GROUP_ID = "print-consumer-v2"
 
 def main():
     consumer = KafkaConsumer(

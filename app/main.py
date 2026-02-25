@@ -99,6 +99,8 @@ def post_product(product: ProductSchema):
         value=event,
     )
 
+    app.state.kafka_producer.flush()
+
     return row
 
 @app.get("/products/{product_id}", response_model=ProductRead)
