@@ -1,5 +1,9 @@
+import json
+
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
+
+from kafka import KafkaProducer
 from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 
@@ -14,6 +18,10 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
+
+# Kafka Setup
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
+PRODUCTS_TOPIC = os.getenv("PRODUCTS_TOPIC", "products.created")
 
 DATABASE_URL = (
     f"postgresql://{DB_USER}:{DB_PASSWORD}"
@@ -38,9 +46,21 @@ async def lifespan(app: FastAPI):
             """)
         conn.commit()
 
+    # Kafka producer (sync)
+    app.state.kafka_producer = KafkaProducer(
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        key_serializer=lambda k: k.encode("utf-8") if k else None,
+    )
+
     yield
 
     # Shutdown
+    try:
+        app.state.kafka_producer.close()
+    except Exception:
+        pass
+
     app.state.pool.close()
 
 
@@ -62,6 +82,22 @@ def post_product(product: ProductSchema):
             )
             row = cur.fetchone()
             conn.commit()
+
+    # Publish "product.created" event to Kafka
+    event = {
+        "type": "product.created",
+        "product_id": row["id"],
+        "name": row["name"],
+        "price": str(row["price"]),
+        "quantity": row["quantity"],
+        "created_at": row["created_at"].isoformat(),
+    }
+
+    app.state.kafka_producer.send(
+        PRODUCTS_TOPIC,
+        key=str(row["id"]),
+        value=event,
+    )
 
     return row
 
