@@ -1,0 +1,11 @@
+[project]
+name = "lektion-10"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi[standard]>=0.128.8",
+    "psycopg[binary,pool]>=3.2.13",
+    "python-dotenv>=1.2.1",
+]
